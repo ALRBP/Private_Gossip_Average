@@ -15,7 +15,7 @@
 #include "average/average.h++"
 #include "graph/graph.h++"
 
-#define ARG_ERR "Error! Incorrect arguments!\nCorrect usage:\npga-test avg <address length> <peers count> <runing time> <security level> <min peer value> <max peer value> <security factor> <protection factor> <wait time> <max answers during securing>\npga-test ps <address length> <peers count> <runing time> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans>\npga-test full <address length> <peers count> <runing time> <security level> <min peer value> <max peer value> <security factor> <protection factor> <wait time> <max answers during securing> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans> <startup time>\npga-test stat <address length> <peers count> <runing time> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans> <number of runs>\npga-test conv <address length> <peers count> <runing time> <security level> <min peer value> <max peer value> <security factor> <protection factor> <wait time> <max answers during securing> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans> <startup time> <exchanges between samples> <step between sampled peers>\npga-test rp <address length> <peers count> <runing time> <time between pulls> <pull size> <max view size>"
+#define ARG_ERR "Error! Incorrect arguments!\nCorrect usage:\npga-test avg <address length> <peers count> <running time> <security level> <min peer value> <max peer value> <security factor> <protection factor> <wait time> <max answers during securing>\npga-test ps <address length> <peers count> <running time> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans>\npga-test full <address length> <peers count> <running time> <security level> <min peer value> <max peer value> <security factor> <protection factor> <wait time> <max answers during securing> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans> <startup time>\npga-test stat <address length> <peers count> <running time> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans> <number of runs>\npga-test conv <address length> <peers count> <running time> <security level> <min peer value> <max peer value> <security factor> <protection factor> <wait time> <max answers during securing> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans> <startup time> <exchanges between samples> <step between sampled peers>\npga-test rp <address length> <peers count> <running time> <time between pulls> <pull size> <max view size>\npga-test ct <address length> <peers count> <running time> <security level> <min peer value> <max peer value> <security factor> <protection factor> <wait time> <max answers during securing> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans> <startup time> <convergence criterion> <grain> <number of runs>"
 
 
 int main(int argc, char *argv[])
@@ -552,6 +552,245 @@ int main(int argc, char *argv[])
             }
             std::cout << '\n' << std::endl;
         }
+    }
+    else if(mode == "ct")
+    {
+        size_t cleanEvery, deterThld, keepThld;
+        int wt, pullEvery;
+        unsigned sec, ansSec, stt, gr, ns;
+        uint64_t pullSize;
+        double minVal, maxVal, secFac, protFac, convCrit, avg = 0.0;
+        std::chrono::steady_clock::duration minc = std::chrono::steady_clock::duration::max(), avgc = std::chrono::steady_clock::duration::zero(), maxc = std::chrono::steady_clock::duration::min(), t;
+        if(argc != 21)
+        {
+            std::cout << ARG_ERR << std::endl;
+            exit(EXIT_FAILURE);
+        }
+        sscanf(argv[5],"%u",&sec);
+        sscanf(argv[6],"%lf",&minVal);
+        sscanf(argv[7],"%lf",&maxVal);
+        sscanf(argv[8],"%lf",&secFac);
+        sscanf(argv[9],"%lf",&protFac);
+        sscanf(argv[10],"%d",&wt);
+        sscanf(argv[11],"%u",&ansSec);
+        sscanf(argv[12],"%d",&pullEvery);
+        sscanf(argv[13],"%lu",&pullSize);
+        sscanf(argv[14],"%zu",&deterThld);
+        sscanf(argv[15],"%zu",&keepThld);
+        sscanf(argv[16],"%zu",&cleanEvery);
+        sscanf(argv[17],"%u",&stt);
+        sscanf(argv[18],"%lf",&convCrit);
+        sscanf(argv[19],"%u",&gr);
+        sscanf(argv[20],"%u",&ns);
+        std::default_random_engine gen(std::chrono::system_clock::now().time_since_epoch().count());
+        std::uniform_real_distribution<double> randGen(minVal,maxVal);
+        convCrit*= (maxVal-minVal);
+        for(size_t k = 0; k < ns; ++k)
+        {
+            LocalConnector::ConnectMap cm;
+            LocalConnector lcTab[peersCnt];
+            HierarchicalGossipConnector hgcTab[peersCnt];
+            PrivateGossipAveragePeer pgapTab[peersCnt];
+            lcTab[0] = LocalConnector(randAddr(addrLen),&cm);
+            hgcTab[0] = HierarchicalGossipConnector(lcTab,pullEvery,pullSize,deterThld,keepThld,cleanEvery,PrivateGossipAveragePeer::getMaxDatagramLen());
+            pgapTab[0] = PrivateGossipAveragePeer(randGen(gen),sec,((secFac+1.0)*minVal-(secFac-1.0)*maxVal)/2.0,((secFac+1.0)*maxVal-(secFac-1.0)*minVal)/2.0,protFac,wt,ansSec,gr,hgcTab);
+            for(size_t i = 1; i < peersCnt; ++i)
+            {
+                boost::dynamic_bitset<> addr;
+                do
+                {
+                    addr = randAddr(addrLen);
+                }
+                while(cm.map.find(addr) != cm.map.end());
+                lcTab[i] = LocalConnector(addr,&cm);
+                hgcTab[i] = HierarchicalGossipConnector(lcTab+i,pullEvery,pullSize,deterThld,keepThld,cleanEvery,PrivateGossipAveragePeer::getMaxDatagramLen());
+                hgcTab[i].injectPeer(hgcTab[0].getAddress());
+                pgapTab[i] = PrivateGossipAveragePeer(randGen(gen),sec,((secFac+1.0)*minVal-(secFac-1.0)*maxVal)/2.0,((secFac+1.0)*maxVal-(secFac-1.0)*minVal)/2.0,protFac,wt,ansSec,gr,hgcTab+i);
+            }
+            for(size_t i = 0; i < peersCnt; ++i)
+            {
+                hgcTab[i].activate();
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(stt));
+            std::chrono::steady_clock::time_point st = std::chrono::steady_clock::now();
+            for(size_t i = 0; i < peersCnt; ++i)
+            {
+                pgapTab[i].activate();
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(rTime));
+            for(size_t i = 0; i < peersCnt; ++i)
+            {
+                pgapTab[i].inactivate();
+                hgcTab[i].inactivate();
+            }
+            for(size_t i = 0; i < peersCnt; ++i)
+            {
+                avg+= pgapTab[i].getCurrentVal()/peersCnt;
+            }
+            std::chrono::steady_clock::time_point conv = std::chrono::steady_clock::time_point::min();
+            for(size_t i = 0; i < peersCnt; ++i)
+            {
+                std::chrono::steady_clock::time_point ct = std::chrono::steady_clock::time_point::max();
+                std::list<std::pair<std::chrono::steady_clock::time_point,double>> sv = pgapTab[i].getValSamples();
+                while((!sv.empty()) && (abs(sv.back().second-avg)<convCrit))
+                {
+                    ct = sv.back().first;
+                    sv.pop_back();
+                }
+                if(ct > conv)
+                {
+                    conv = ct;
+                }
+            }
+            t = (conv-st);
+            if(t < minc)
+            {
+                minc = t;
+            }
+            avgc+= t/ns;
+            if(t > maxc)
+            {
+                maxc = t;
+            }
+        }
+        std::cout << "Convergence times:\nHAPS: " << ']' << minc.count() << '-' << avgc.count() << '-' << maxc.count() << '[' << std::endl;
+        minc = std::chrono::steady_clock::duration::max();
+        avgc = std::chrono::steady_clock::duration::zero();
+        maxc = std::chrono::steady_clock::duration::min();
+        for(size_t k = 0; k < ns; ++k)
+        {
+            LocalConnector::ConnectMap cm;
+            LocalConnector lcTab[peersCnt];
+            ReqPullGossipConnector rpgcTab[peersCnt];
+            PrivateGossipAveragePeer pgapTab[peersCnt];
+            lcTab[0] = LocalConnector(randAddr(addrLen),&cm);
+            rpgcTab[0] = ReqPullGossipConnector(lcTab,pullEvery,pullSize,1<<keepThld,PrivateGossipAveragePeer::getMaxDatagramLen());
+            pgapTab[0] = PrivateGossipAveragePeer(randGen(gen),sec,((secFac+1.0)*minVal-(secFac-1.0)*maxVal)/2.0,((secFac+1.0)*maxVal-(secFac-1.0)*minVal)/2.0,protFac,wt,ansSec,gr,rpgcTab);
+            for(size_t i = 1; i < peersCnt; ++i)
+            {
+                boost::dynamic_bitset<> addr;
+                do
+                {
+                    addr = randAddr(addrLen);
+                }
+                while(cm.map.find(addr) != cm.map.end());
+                lcTab[i] = LocalConnector(addr,&cm);
+                rpgcTab[i] = ReqPullGossipConnector(lcTab+i,pullEvery,pullSize,1<<keepThld,PrivateGossipAveragePeer::getMaxDatagramLen());
+                rpgcTab[i].injectPeer(rpgcTab[0].getAddress());
+                pgapTab[i] = PrivateGossipAveragePeer(randGen(gen),sec,((secFac+1.0)*minVal-(secFac-1.0)*maxVal)/2.0,((secFac+1.0)*maxVal-(secFac-1.0)*minVal)/2.0,protFac,wt,ansSec,gr,rpgcTab+i);
+            }
+            for(size_t i = 0; i < peersCnt; ++i)
+            {
+                rpgcTab[i].activate();
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(stt));
+            std::chrono::steady_clock::time_point st = std::chrono::steady_clock::now();
+            for(size_t i = 0; i < peersCnt; ++i)
+            {
+                pgapTab[i].activate();
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(rTime));
+            for(size_t i = 0; i < peersCnt; ++i)
+            {
+                pgapTab[i].inactivate();
+                rpgcTab[i].inactivate();
+            }
+            avg = 0.0;
+            for(size_t i = 0; i < peersCnt; ++i)
+            {
+                avg+= pgapTab[i].getCurrentVal()/peersCnt;
+            }
+            std::chrono::steady_clock::time_point conv = std::chrono::steady_clock::time_point::min();
+            for(size_t i = 0; i < peersCnt; ++i)
+            {
+                std::chrono::steady_clock::time_point ct = std::chrono::steady_clock::time_point::max();
+                std::list<std::pair<std::chrono::steady_clock::time_point,double>> sv = pgapTab[i].getValSamples();
+                while((!sv.empty()) && (abs(sv.back().second-avg)<convCrit))
+                {
+                    ct = sv.back().first;
+                    sv.pop_back();
+                }
+                if(ct > conv)
+                {
+                    conv = ct;
+                }
+            }
+            t = (conv-st);
+            if(t < minc)
+            {
+                minc = t;
+            }
+            avgc+= t/ns;
+            if(t > maxc)
+            {
+                maxc = t;
+            }
+        }
+        std::cout << "Req-Pull: " << ']' << minc.count() << '-' << avgc.count() << '-' << maxc.count() << '[' << std::endl;
+        minc = std::chrono::steady_clock::duration::max();
+        avgc = std::chrono::steady_clock::duration::zero();
+        maxc = std::chrono::steady_clock::duration::min();
+        for(size_t k = 0; k < ns; ++k)
+        {
+            LocalConnector::ConnectMap cm;
+            LocalConnector lcTab[peersCnt];
+            LocalGossipConnector::PeerSet ps;
+            LocalGossipConnector lgcTab[peersCnt];
+            PrivateGossipAveragePeer pgapTab[peersCnt];
+            for(size_t i = 0; i < peersCnt; ++i)
+            {
+                boost::dynamic_bitset<> addr;
+                do
+                {
+                    addr = randAddr(addrLen);
+                }
+                while(cm.map.find(addr) != cm.map.end());
+                lcTab[i] = LocalConnector(addr,&cm);
+                lgcTab[i] = LocalGossipConnector(lcTab+i,&ps);
+                pgapTab[i] = PrivateGossipAveragePeer(randGen(gen),sec,((secFac+1.0)*minVal-(secFac-1.0)*maxVal)/2.0,((secFac+1.0)*maxVal-(secFac-1.0)*minVal)/2.0,protFac,wt,ansSec,gr,lgcTab+i);
+            }
+            std::chrono::steady_clock::time_point st = std::chrono::steady_clock::now();
+            for(size_t i = 0; i < peersCnt; ++i)
+            {
+                pgapTab[i].activate();
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(rTime));
+            for(size_t i = 0; i < peersCnt; ++i)
+            {
+                pgapTab[i].inactivate();
+            }
+            avg = 0.0;
+            for(size_t i = 0; i < peersCnt; ++i)
+            {
+                avg+= pgapTab[i].getCurrentVal()/peersCnt;
+            }
+            std::chrono::steady_clock::time_point conv = std::chrono::steady_clock::time_point::min();
+            for(size_t i = 0; i < peersCnt; ++i)
+            {
+                std::chrono::steady_clock::time_point ct = std::chrono::steady_clock::time_point::max();
+                std::list<std::pair<std::chrono::steady_clock::time_point,double>> sv = pgapTab[i].getValSamples();
+                while((!sv.empty()) && (abs(sv.back().second-avg)<convCrit))
+                {
+                    ct = sv.back().first;
+                    sv.pop_back();
+                }
+                if(ct > conv)
+                {
+                    conv = ct;
+                }
+            }
+            t = (conv-st);
+            if(t < minc)
+            {
+                minc = t;
+            }
+            avgc+= t/ns;
+            if(t > maxc)
+            {
+                maxc = t;
+            }
+        }
+        std::cout << "Perfect: " << ']' << minc.count() << '-' << avgc.count() << '-' << maxc.count() << '[' << std::endl;
     }
     else
     {

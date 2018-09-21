@@ -2,15 +2,16 @@ BUILD
 No configuration required
 Build with the command: make
 Should build with any C++17 compliant compiler
-Tested with GCC 7.3
+Tested with GCC 7 and 8
 This program should work on GNU/Linux systems, hopefully it will also on *BSD systems
 Remove temporary files with the command: make clean
 Remove all generated files with the command: make mrproper
 
 RUN
-pga-test avg <address length> <peers count> <runing time> <security level> <min peer value> <max peer value> <security factor> <protection factor> <wait time> <max answers during securing>
-pga-test ps <address length> <peers count> <runing time> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans>
-pga-test full <address length> <peers count> <runing time> <security level> <min peer value> <max peer value> <security factor> <protection factor> <wait time> <max answers during securing> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans> <startup time>
-pga-test stat <address length> <peers count> <runing time> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans> <number of runs>
-pga-test conv <address length> <peers count> <runing time> <security level> <min peer value> <max peer value> <security factor> <protection factor> <wait time> <max answers during securing> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans> <startup time> <exchanges between samples> <step between sampled peers>
-pga-test rp <address length> <peers count> <runing time> <time between pulls> <pull size> <max view size>
+pga-test avg <address length> <peers count> <running time> <security level> <min peer value> <max peer value> <security factor> <protection factor> <wait time> <max answers during securing>
+pga-test ps <address length> <peers count> <running time> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans>
+pga-test full <address length> <peers count> <running time> <security level> <min peer value> <max peer value> <security factor> <protection factor> <wait time> <max answers during securing> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans> <startup time>
+pga-test stat <address length> <peers count> <running time> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans> <number of runs>
+pga-test conv <address length> <peers count> <running time> <security level> <min peer value> <max peer value> <security factor> <protection factor> <wait time> <max answers during securing> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans> <startup time> <exchanges between samples> <step between sampled peers>
+pga-test rp <address length> <peers count> <running time> <time between pulls> <pull size> <max view size>
+pga-test ct <address length> <peers count> <running time> <security level> <min peer value> <max peer value> <security factor> <protection factor> <wait time> <max answers during securing> <time between pulls> <pull size> <deterministic threshold> <keep threshold> <pulls between cleans> <startup time> <convergence criterion> <grain> <number of runs>
