@@ -424,7 +424,7 @@ int main(int argc, char *argv[])
         for(size_t i = 0; (i*sampleFor) < peersCnt; ++i)
         {
             std::ofstream f("hsample"+std::to_string(i)+".dat",std::ofstream::trunc);
-            for(auto& s : pgapTab[i].getValSamples())
+            for(auto& s : pgapTab[i*sampleFor].getValSamples())
             {
                 f << (s.first-st).count() << ' ' << s.second << std::endl;
             }
@@ -465,7 +465,7 @@ int main(int argc, char *argv[])
         for(size_t i = 0; (i*sampleFor) < peersCnt; ++i)
         {
             std::ofstream f("psample"+std::to_string(i)+".dat",std::ofstream::trunc);
-            for(auto& s : pgapTab[i].getValSamples())
+            for(auto& s : pgapTab[i*sampleFor].getValSamples())
             {
                 f << (s.first-st).count() << ' ' << s.second << std::endl;
             }
@@ -497,7 +497,7 @@ int main(int argc, char *argv[])
         for(size_t i = 0; (i*sampleFor) < peersCnt; ++i)
         {
             std::ofstream f("fsample"+std::to_string(i)+".dat",std::ofstream::trunc);
-            for(auto& s : pgapTab[i].getValSamples())
+            for(auto& s : pgapTab[i*sampleFor].getValSamples())
             {
                 f << (s.first-st).count() << ' ' << s.second << std::endl;
             }
