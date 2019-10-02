@@ -294,10 +294,13 @@ void PrivateGossipAveragePeer::threadFunction(void)
         working = true;
         cv.notify_all();
     }
+    unsigned untilSample = sample;
+    if(untilSample)
+    {
+        vals.push_back(std::pair(std::chrono::steady_clock::now(),val));
+    }
     while(active && working)
     {
-        unsigned untilSample = sample;
-        vals.push_back(std::pair(std::chrono::steady_clock::now(),val));
         boost::dynamic_bitset<> peer;
         peer = cnt->getRandomPeer();
         sndTo(peer,{MsgType::Call,val});
